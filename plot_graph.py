@@ -12,10 +12,6 @@ date,bid,ask = np.loadtxt('/home/eshinig/comp/6731/project/python/GBPUSD/GBPUSD1
                               delimiter=',',
                               converters={0:mdates.strpdate2num('%Y%m%d%H%M%S')})
 
-avgLine = ((bid+ask)/2)
-patterArr= []
-performanceArr = []
-patForRec = []
 
 
 def percentChange(startPoint, currentPoint):
@@ -79,25 +75,52 @@ def currentPattern():
 
 
 def patternRecognition():
+    patternFound = False
+    plotPatternArray = []
+    predictedOutcomesAr = []
     for eachPattern in patterArr:
         similarPattern = []
+        #this finds similarity of last 30 points in whole 1 day
         for i in xrange(30):
             similarPattern.insert(i,(100 - abs(percentChange(eachPattern[i],patForRec[i]))))
 
         avgSimilarity = reduce(lambda x, y: x+y, similarPattern)/len(similarPattern)
 
-        if avgSimilarity > 40:
+        if avgSimilarity > 70:
             patIndex = patterArr.index(eachPattern)
-            print '###############################'
+
+            patternFound = True
+            '''print '###############################'
             print "currentPattern[10]:" ,patForRec
             print "pastPattern[10]:" ,eachPattern
-            print "predicted outcome", performanceArr[patIndex]
+            print "predicted outcome", performanceArr[patIndex]'''
             xp = list(range(1,31))
-            fig  = plt.figure()
-            plt.plot(xp,patForRec)
-            plt.plot(xp,eachPattern)
-            plt.show()
-    
+            plotPatternArray.append(eachPattern)
+
+    if patternFound:
+        fig  = plt.figure(figsize=(10,6))
+        for eachPatt in plotPatternArray:
+            futurePoints = patterArr.index(eachPatt)
+
+            if performanceArr[futurePoints] > patForRec[28]:
+                pcolor = '#24bc00'
+            else:
+                pcolor = '#d40000'
+            plt.plot(xp,eachPatt)
+            predictedOutcomesAr.append(performanceArr[futurePoints])
+            plt.scatter(35,performanceArr[futurePoints])
+
+        realOutcomeRange = allData[noOfPointsInOneBatch+20:noOfPointsInOneBatch+30]
+        realAvgOutcome = reduce(lambda x, y: x+y, realOutcomeRange)/len(realOutcomeRange)
+        realMovement = percentChange(allData[noOfPointsInOneBatch], realAvgOutcome)
+        predictedAvgOutcome = reduce(lambda x, y: x+y, predictedOutcomesAr)/len(predictedOutcomesAr)
+        plt.scatter(40,realMovement,c='#54fff7',s=25)
+        plt.scatter(40,predictedAvgOutcome,c='b',s=25)
+        plt.plot(xp,patForRec,'#54fff7',linewidth = 5)
+        plt.grid(True)
+        plt.title('Pattern Recognition')
+        plt.show()
+        
     
 def graphRawFx():
     
@@ -121,10 +144,27 @@ def graphRawFx():
     plt.grid(True)
     plt.show()
 
-patternStorage()
-currentPattern()
-patternRecognition()
 
-totalEnd = time.time()
+dataLength = int (bid.shape[0])
+print "dataLength:",dataLength
 
-print "Entire processing time taken:", totalEnd - totalStart
+noOfPointsInOneBatch = 37000
+allData = ((bid+ask)/2)
+
+while noOfPointsInOneBatch < dataLength:
+    avgLine = allData[:noOfPointsInOneBatch]
+    patterArr= []
+    performanceArr = []
+    patForRec = []
+
+    patternStorage()
+    currentPattern()
+    patternRecognition()
+
+    totalEnd = time.time()
+    print "Entire processing time taken:", totalEnd - totalStart
+
+    #raw_input('press ENter to continue....')
+    noOfPointsInOneBatch += 1
+
+    
