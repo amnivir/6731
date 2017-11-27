@@ -6,6 +6,7 @@ import datetime
 import math
 import itertools
 import numpy as np
+import csv
 from collections import OrderedDict
 
 
@@ -52,6 +53,7 @@ def fetchFeature(featureName, featureArray):
 	    'item': featureName,
 	    'start_date': '2014-11-01',
 	    'end_date': '2017-11-25',
+	    'frequency': 'daily',
 	    'sort_order': 'asc'
 	}
 	 
@@ -67,8 +69,6 @@ def fetchFeature(featureName, featureArray):
 	    intDate = int(datetime.date.strftime(d, "%Y%m%d"))
 	    if featureName == "marketcap" or featureName == "adj_volume" : 
 		    featureArray[intDate] = math.log10(float(value))
-	    if featureName == "marketcap" or featureName == "adj_volume" :
-                    featureArray[intDate] = 100*(float(value))   
 	    else:
 		    featureArray[intDate] = float(value)
 
@@ -77,13 +77,13 @@ def calEuclideanDist(date1, date2):
 	if date1 == date2:
 		return -1
 	else:
-		return math.sqrt((mc[date1]-mc[date2])**2 + (pe[date1]-pe[date2])**2 + (pb[date1]-pb[date2])**2 + (av[date1]-av[date2])**2 + (pc[date1]-pc[date2])**2) 
+		return math.sqrt((cp[date1]-cp[date2])**2 + (mc[date1]-mc[date2])**2 + (pe[date1]-pe[date2])**2 + (pb[date1]-pb[date2])**2 + (av[date1]-av[date2])**2 + (pc[date1]-pc[date2])**2) 
 
 def calManhattanDist(date1, date2):
 	if date1 == date2:
 		return -1
 	else:
-		return (abs(mc[date1]-mc[date2]) + abs(pe[date1]-pe[date2]) + abs(pb[date1]-pb[date2]) + abs(av[date1]-av[date2]) + abs(pc[date1]-pc[date2])) 
+		return (abs(cp[date1]-cp[date2])+abs(mc[date1]-mc[date2]) + abs(pe[date1]-pe[date2]) + abs(pb[date1]-pb[date2]) + abs(av[date1]-av[date2]) + abs(pc[date1]-pc[date2])) 
 
 
 fetchFeature(feature_list[0], cp)
@@ -92,6 +92,22 @@ fetchFeature(feature_list[2], pe)
 fetchFeature(feature_list[3], pb)
 fetchFeature(feature_list[4], av)
 fetchFeature(feature_list[5], pc)
+
+
+#write to csv
+f = open(ticker, 'wt')
+try:
+    writer = csv.writer(f)
+    writer.writerow( ('Date', 'marketcap(log)', 'pricetoearnings', 'pricetobook', 'adj_volume(log)', 'close_price', 'percent_change(class)') )
+    for key in pe:
+	# 0 means SELL and 1 means BUY
+	classifier_category = 0
+	if pc[key] > 0:
+		classifier_category = 1
+        writer.writerow((key, mc[key], pe[key], pb[key], av[key], cp[key], classifier_category))
+finally:
+    f.close()
+    
 
 print "Market_Cap=", len(mc)
 print "Closing_Price=", len(cp)
@@ -178,7 +194,7 @@ for i, currDate in enumerate(testDataList):
 	        #j += 1
 
 
-
+	pcCounterPositive = 0
 	predictedAvgCp = 0
 	for date in nearestDates:
 		"""print "actual close price", cp[date]"""
@@ -207,7 +223,7 @@ for i, currDate in enumerate(testDataList):
 	''' Add the test data into training sample'''
 	trainingDataList.append(currDate)
 
-	pcCounterPositive = 0
+	
 	for date in nearestDates:
 		print "actual percentChange", pc[date]
                 if pc[date] > 0:
