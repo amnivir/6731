@@ -7,6 +7,8 @@ import math
 import itertools
 import numpy as np
 import csv
+import sys
+import copy
 from collections import OrderedDict
 
 
@@ -23,6 +25,7 @@ api_password = "19beb02c128021eb8d24997749c2b3ce"
 base_url = "https://api.intrinio.com"
 ticker=sys.argv[1]
 K = int(sys.argv[2])
+MA = int(sys.argv[3])
 
 feature_list = [] 
 feature_list.append("close_price")
@@ -51,7 +54,7 @@ def fetchFeature(featureName, featureArray):
 	    'page_number': '1',
 	    'ticker': ticker,
 	    'item': featureName,
-	    'start_date': '2014-11-01',
+	    'start_date': '2014-10-15',
 	    'end_date': '2017-11-25',
 	    'frequency': 'daily',
 	    'sort_order': 'asc'
@@ -86,12 +89,44 @@ def calManhattanDist(date1, date2):
 		return (abs(cp[date1]-cp[date2])+abs(mc[date1]-mc[date2]) + abs(pe[date1]-pe[date2]) + abs(pb[date1]-pb[date2]) + abs(av[date1]-av[date2]) + abs(pc[date1]-pc[date2])) 
 
 
+#calculates moving avg. must be atleast of size MA
+avg = 0
+def calMovingAvg(od):
+	sum = 0.0 
+	for i in range(MA):
+		sum += od.values()[i]
+	avg = sum/MA
+	date = od.keys()[MA-1]
+	od[date] = avg
+	
+	for i in range(MA, len(od)):
+		date = od.keys()[i]
+		current_value = od.values()[i] 
+		old_value =  od.values()[i-MA]
+		new_value = avg + ((current_value - old_value) / MA)
+		od[date] = new_value
+					
+		 
+	
+	
+
 fetchFeature(feature_list[0], cp)
 fetchFeature(feature_list[1], mc)
 fetchFeature(feature_list[2], pe)
 fetchFeature(feature_list[3], pb)
 fetchFeature(feature_list[4], av)
 fetchFeature(feature_list[5], pc)
+
+cp_original = copy.deepcopy(cp)
+pc_original = copy.deepcopy(pc)
+
+#moving average
+calMovingAvg(cp)
+calMovingAvg(mc)
+calMovingAvg(pe)
+calMovingAvg(pb)
+calMovingAvg(av)
+calMovingAvg(pc)
 
 
 #write to csv
@@ -114,7 +149,7 @@ print "Closing_Price=", len(cp)
 print "peratio=", len(pe)
 
 for key in pe:
-        print key , " market_cap=" , mc[key], " closing_price", cp[key], " peratio=", pe[key], " pc=", pc[key]
+        print key , " market_cap=" , mc[key], " closing_price=", cp[key]," closing_original=", cp_original[key], " peratio=", pe[key], " pc=", pc[key]
 
 dates  = cp.keys()
 listCp = cp.values()
@@ -177,22 +212,6 @@ for i, currDate in enumerate(testDataList):
 	print "Nearest Dates", nearestDates
 	nextDatesAtNearestDates = []
 	
-	#calucalate %change between next day of nearest days
-	#percent_change = []
-	#j=0
-	#for nd in nearestDates:
-	#	dateIndex = dates.index(nd)
-	#	print "",dateIndex
-	#	currentDayPrice =cp[dateIndex]
-	#	nextDayPrice = cp[dateIndex+1]
-	#	print "currentDayPrice:", currentDayPrice
-	#	print "nextDayPrice:", nextDayPrice
-		#pc = ( 100* (nextDayPrice - currentDayPrice) ) / currentDayPrice
-		#percent_change.append(pc)
-		#print "j:",j 
-		#print "%change:",percent_change[j]
-	        #j += 1
-
 
 	pcCounterPositive = 0
 	predictedAvgCp = 0
@@ -203,7 +222,7 @@ for i, currDate in enumerate(testDataList):
 	predictedNextDayAvgCp = predictedAvgCp/K
 	
 	actualCurrentDayCp = cp[testDataList[i]]
-	actualNextDayCp =	cp[testDataList[i+1]]
+	actualNextDayCp =    cp[testDataList[i+1]]
 	print "Actual current day close price:", actualCurrentDayCp 
 	print "Predicted Next day close price:", predictedNextDayAvgCp
 	print "Actual Next day close price:", actualNextDayCp
